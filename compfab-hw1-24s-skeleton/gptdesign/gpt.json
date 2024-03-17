@@ -1,0 +1,22 @@
+[
+  {"label": "LivingRoom", "width": 20, "height": 20, "offsetx": 0, "offsety": 0},
+  {"label": "Kitchen", "width": 10, "height": 12, "offsetx": 20, "offsety": 0},
+  {"label": "Bathroom", "width": 8, "height": 10, "offsetx": 30, "offsety": 0},
+  {"label": "Bathroom", "width": 8, "height": 10, "offsetx": 30, "offsety": 10},
+  {"label": "Bedroom", "width": 15, "height": 20, "offsetx": 0, "offsety": 20},
+  {"label": "Bedroom", "width": 15, "height": 20, "offsetx": 15, "offsety": 20},
+  {"label": "Passageway", "width": 5, "height": 20, "offsetx": 30, "offsety": 20},
+  {"label": "DiningRoom", "width": 15, "height": 15, "offsetx": 35, "offsety": 0}
+ ]
+ 
+ 
+ 
+ 
+
+ 
+ 
+
+
+  
+  
+  

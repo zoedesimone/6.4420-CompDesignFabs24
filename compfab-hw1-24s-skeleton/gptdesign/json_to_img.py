@@ -1,4 +1,3 @@
-
 import svgwrite
 from svgwrite import mm, Drawing
 import json
