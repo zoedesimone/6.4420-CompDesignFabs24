@@ -138,7 +138,7 @@ class StaticFEM:
         dim, simplex_size = V.shape[1], T.shape[1]
 
         # Initialize an empty list of triplets for the output sparse matrix
-        triplets: List[int, int, float] = [[0, 0, 0.0]]
+        triplets = [] # modified this line: triplets: List[int, int, float] = [[0, 0, 0.0]]
 
         # Iterate over all tet elements
         for t in range(num_tets):
@@ -163,8 +163,8 @@ class StaticFEM:
             #   - Use `A.T` or `np.transpose(A)` to transpose a 2D array A
             #   - Use the `@` operator for matrix multiplication
             tet_vertices = vertices[T[t]]
-            Ds = ...    # <--
-            F = ...     # <--
+            Ds =  tet_vertices[1:] - tet_vertices[0]   # <--
+            F = Ds @ Dm_inv[t]     # <--
 
             # Compute tet element t's contribution to the stiffness matrix K
             # Formula: Kt = d^2(Et)/d(xt)^2, where
@@ -182,9 +182,9 @@ class StaticFEM:
             # Let's first prepare the operands
             # --------
             # TODO: Your code here. Get the volume of t, dP/dF and dF/dx.
-            vol = ...       # <--
-            dP_dF = ...     # <--
-            dF_dxt = ...    # <--
+            vol = volumes[t]       # <--
+            dP_dF = material.stress_differential(F)     # <--
+            dF_dxt = dF_dx[t]    # <--
 
             # Compute Kt using the formula above
             # --------
@@ -194,8 +194,8 @@ class StaticFEM:
             # HINT:
             #   - Use the `@` operator for matrix multiplication
             #   - Some matrix should be transposed in Step 2
-            dP_dxt = ...    # <--
-            Kt = np.zeros((simplex_size * dim, simplex_size * dim))     # <--
+            dP_dxt = dP_dF @ dF_dxt   # <--
+            Kt = vol * dP_dxt @  dF_dxt.T #np.zeros((simplex_size * dim, simplex_size * dim))     # <--
 
             # Suppress negative zeroes
             Kt = np.where(np.abs(Kt) < 1e-8, 0, Kt)
@@ -219,18 +219,22 @@ class StaticFEM:
             # Construct the index mapping from Kt to K
             # --------
             # TODO: Your code here. Implement step 1.
-            m = Kt.shape[0]
-            index_map = np.zeros(m, dtype=np.int64)
-            for i in []:        # <--
-                for j in []:    # <--
-                    ...         # <--
+            index_map = np.repeat(T[t] * dim, dim) + np.tile(np.arange(dim), 4)
+            #m = Kt.shape[0] #(row_ind, col_ind, val)
+            #index_map = np.zeros(m, dtype=np.int64)
+            #global_vertex_indices = T[t]
+            #for i in range(Kt.shape[0]):        # <--
+            #    for j in range(Kt.shape[1]):    # <-- 
+            #        local_index = i * dim + j         # <--
+            #        index_map[local_index] = global_vertex_indices[i] * dim + j
 
             # Create m^2 triplets for K
             # --------
             # TODO: Your code here. Implement step 2.
-            for i in []:        # <--
-                for j in []:    # <--
-                    ...         # <--
+            for i in range(Kt.shape[0]):        # <--
+                for j in range(Kt.shape[1]):    # <--
+                    if Kt[i, j] != 0:
+                        triplets.append((index_map[i], index_map[j], Kt[i, j])) # <--
 
         # Construct the sparse matrix K
         row_inds, col_inds, vals = list(zip(*triplets))
@@ -330,8 +334,8 @@ class StaticFEM:
             # HINT: use the function `conjugate_gradient` to solve linear equations A * x = b.
             # The usage is `x, stat = conjugate_gradient(A, b)`, where `stat` indicates the
             # status of the CG solver.
-            f_res = np.zeros_like(f_ext)            # <--
-            dU, stat = np.zeros_like(f_ext), 0      # <--
+            f_res = f_ext + f_el            # <--
+            dU, stat = conjugate_gradient(K, f_res)     # <--
             if stat != 0:
                 print('Warning - CG solver failed with status', stat)
 
@@ -356,7 +360,7 @@ class StaticFEM:
                 # Compute the current U using the step size l
                 # --------
                 # TODO: Your code here. Compute U.
-                U = np.zeros_like(Ui)       # <--
+                U = Ui + l * dU       # <--
 
                 # Get the vertex coordinates `V_l` given the deformation matrix U
                 V_l = V.copy()
@@ -367,12 +371,12 @@ class StaticFEM:
                 #   2. Compute f_res
                 # --------
                 # TODO: Your code here. Compute f_el.
-                f_el_full = np.zeros_like(V)    # <--
+                f_el_full = self.elastic_force(V_l)  # <--
                 f_el[:] = f_el_full.ravel()[active_mask]
 
                 # --------
                 # TODO: Your code here. Compute f_res at step size l.
-                f_res_l = np.zeros_like(f_ext)      # <--
+                f_res_l = f_ext - f_el      # <--
 
                 # Exit the loop if `f_res_l` has a smaller norm than `f_res`
                 # --------
@@ -380,8 +384,8 @@ class StaticFEM:
                 # HINT:
                 #   - The `np.linalg.norm` function computes the norm of a vector.
                 #   - The norm of f_res has been precomputed and stored in `f_res_norm`
-                f_res_l_norm = 0.0      # <--
-                if True:                # <--
+                f_res_l_norm = np.linalg.norm(f_res_l)      # <--
+                if f_res_l_norm < f_res_norm:                # <--
                     break
 
                 # Halve the step size
@@ -403,7 +407,7 @@ class StaticFEM:
             # TODO: Your code here.
             # HINT: You will need the deformed vertex positions to compute the stiffness matrix.
             # However, it's actually ready in an existing variable. Which one is it?
-            K_full = csc_matrix((V.shape[0] * dim, V.shape[0] * dim))   # <--
+            K_full = self.stiffness_matrix(V_l)   # <--
             K = K_full[active_indices][:, active_indices]
 
         # Obtain the full-size deformation matrix U
