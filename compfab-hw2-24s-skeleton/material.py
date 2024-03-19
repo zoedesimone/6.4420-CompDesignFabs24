@@ -84,14 +84,18 @@ class LinearElastic(Material):
         dim, dim2 = F.shape[0], F.shape[0] ** 2
         mu, lm = self.mu, self.lm
 
+        #print(f"defomation gradient F:{F}")
         # Compute d(F.T)/dF
         # --------
         # TODO: Your code here. Think about which elements in d(F.T)/dF are non-zero.
         dFT_dF = np.zeros((dim2, dim2))
         for i in range(dim):        # <--
             for j in range(dim):    # <--
-                idx = i * dim + j
-                dFT_dF[idx, idx] = 1 # <--
+                dFT_dF_idx = j * dim + i  # Index in flattened d(F^T)/dF for the derivative of F^T[j,i] w.r.t F[i,j]  # <--
+                F_idx = i * dim + j  # Corresponding index in the flattened version of F  # <--
+                dFT_dF[F_idx,dFT_dF_idx] = 1 # <-- swapped indices?
+
+        #print(f"dFT_dF:{dFT_dF}")
 
         # Compute D1
         # --------
@@ -101,12 +105,19 @@ class LinearElastic(Material):
 
         # Compute D2 = d(F.trace() * I)/dF
         # --------
-        # it affects only the diagonal elements of F, scaled by the identity matrix
+        # trace is the sum of its diagonal elements. The trace multiplied by I
+        # affects only the diagonal elements of F, scaled by the identity matrix
+        # tr(F) affects all diagonal elements of tr(F)*I equally
         #TODO: Your code here. Think about which elements in D2 are non-zero
+        I_dxd = np.eye(dim)
         D2 = np.zeros((dim2, dim2))
-        for i in range(dim):        # <--
-            idx = i * dim +i    # <--
-            D2[idx, idx] = dim         # <--
+        for i in range(dim):       
+                #D2[i*dim:(i+1)*dim, i*dim:(i+1)*dim] = I_dxd #this doesn't break the solver, but it's just an identity matrix?! Equivalent to D2 = np.eye(dim2)
+                D2[i*dim + i] = I_dxd.flatten() #this seems like the correct thing to do from piazza
+       # print(f"D2:{D2}")
+        #print(f"D2:{D2}")
+        #print(f"D2 shape:{D2.shape}")  
+
 
         # Compute dP/dF
         # --------

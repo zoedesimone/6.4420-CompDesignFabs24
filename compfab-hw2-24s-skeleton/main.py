@@ -143,7 +143,7 @@ def boundary_conditions_custom(vertices: array, tolerance: float=1e-8) -> Tuple[
     #       `(V[:, 0] < t1 + tolerance) & (V[:, 1] >= t2 - tolerance)`
     #     generates a Boolean mask for vertices whose X coordinates are smaller than t1 and whose
     #     Y coordinates are no less than t2 (both with some tolerance).
-    bc = np.zeros(V.shape[0], dtype=bool)   # <--
+    bc = np.abs(V[:, 1] - 0) < tolerance   # <--
 
     # Set the external forces
     # --------
@@ -151,9 +151,9 @@ def boundary_conditions_custom(vertices: array, tolerance: float=1e-8) -> Tuple[
     # HINT:
     #   - Like the previous blank, you will compute a Boolean mask for the vertices to exert forces
     #     at. You could also read the `boundary_condition` function for reference.
-    f_ext_mask = np.zeros(V.shape[0], dtype=bool)   # <--
+    f_ext_mask = np.abs(V[:, 1] - bbox_size[1]) < tolerance  # <--
     f_ext = np.zeros_like(V)
-    f_ext[f_ext_mask] = [0, 0, 0]       # <--
+    f_ext[f_ext_mask] = [0, 1, 0]       # <-- upward_force
 
     print(f'Boundary conditions: {bc.sum()} fixed points, {f_ext_mask.sum()} external forces')
 

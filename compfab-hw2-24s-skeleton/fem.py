@@ -163,8 +163,8 @@ class StaticFEM:
             #   - Use `A.T` or `np.transpose(A)` to transpose a 2D array A
             #   - Use the `@` operator for matrix multiplication
             tet_vertices = vertices[T[t]]
-            Ds =  tet_vertices[1:] - tet_vertices[0]   # <--
-            F = Ds @ Dm_inv[t]     # <--
+            Ds =  tet_vertices[1:] - tet_vertices[0]   # <-- Ds is defined as the basis after deformation and for a single tetrahedron element
+            F = Ds.T @ Dm_inv[t]     # <-- Check if Ds needs to be transpose Ds.T
 
             # Compute tet element t's contribution to the stiffness matrix K
             # Formula: Kt = d^2(Et)/d(xt)^2, where
@@ -195,10 +195,12 @@ class StaticFEM:
             #   - Use the `@` operator for matrix multiplication
             #   - Some matrix should be transposed in Step 2
             dP_dxt = dP_dF @ dF_dxt   # <--
-            Kt = vol * dP_dxt @  dF_dxt.T #np.zeros((simplex_size * dim, simplex_size * dim))     # <--
+            Kt = vol * dP_dxt.T @  dF_dxt #np.zeros((simplex_size * dim, simplex_size * dim))     # <-- should be a 12x12
+            #print(f"Kt{Kt.shape}")
+            
 
             # Suppress negative zeroes
-            Kt = np.where(np.abs(Kt) < 1e-8, 0, Kt)
+            Kt = np.where(np.abs(Kt) < 1e-8, 0, Kt) 
 
             # Assign the elements of Kt to their right positions in the global matrix K
             #
@@ -219,10 +221,12 @@ class StaticFEM:
             # Construct the index mapping from Kt to K
             # --------
             # TODO: Your code here. Implement step 1.
-            index_map = np.repeat(T[t] * dim, dim) + np.tile(np.arange(dim), 4)
+            # T[t] = vertices from the tetrahedron
+            # repeat each vertex index dim times (degree of freedom) -get starting indices and offset starting indices
+            index_map = np.repeat(T[t] * dim, dim) + np.tile(np.arange(dim), len(T[t]))
             #m = Kt.shape[0] #(row_ind, col_ind, val)
             #index_map = np.zeros(m, dtype=np.int64)
-            #global_vertex_indices = T[t]
+            
             #for i in range(Kt.shape[0]):        # <--
             #    for j in range(Kt.shape[1]):    # <-- 
             #        local_index = i * dim + j         # <--
@@ -240,6 +244,9 @@ class StaticFEM:
         row_inds, col_inds, vals = list(zip(*triplets))
         K = csc_matrix((vals, (row_inds, col_inds)),
                        shape=(num_vertices * dim, num_vertices * dim))
+        
+        #print(f"K size:{K}")
+        #print(f"K size:{K.shape}")
         return K
 
     def solve_linear(self, external_forces: array, boundary_conditions: array) -> array:
@@ -376,7 +383,7 @@ class StaticFEM:
 
                 # --------
                 # TODO: Your code here. Compute f_res at step size l.
-                f_res_l = f_ext - f_el      # <--
+                f_res_l = f_ext + f_el      # <--
 
                 # Exit the loop if `f_res_l` has a smaller norm than `f_res`
                 # --------
