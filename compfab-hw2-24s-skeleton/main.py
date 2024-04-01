@@ -143,7 +143,8 @@ def boundary_conditions_custom(vertices: array, tolerance: float=1e-8) -> Tuple[
     #       `(V[:, 0] < t1 + tolerance) & (V[:, 1] >= t2 - tolerance)`
     #     generates a Boolean mask for vertices whose X coordinates are smaller than t1 and whose
     #     Y coordinates are no less than t2 (both with some tolerance).
-    bc = np.abs(V[:, 1] - 0) < tolerance   # <--
+    z_threshold = 0.005
+    bc = V[:, 2] < (z_threshold + tolerance)  # <--Fix vertices below a certain z value (z_threshold)
 
     # Set the external forces
     # --------
@@ -151,9 +152,11 @@ def boundary_conditions_custom(vertices: array, tolerance: float=1e-8) -> Tuple[
     # HINT:
     #   - Like the previous blank, you will compute a Boolean mask for the vertices to exert forces
     #     at. You could also read the `boundary_condition` function for reference.
-    f_ext_mask = np.abs(V[:, 1] - bbox_size[1]) < tolerance  # <--
+    x_thresh = 0.12
+    y_thresh = 0.12
+    f_ext_mask = (V[:, 0] > (x_thresh + tolerance)) & (V[:, 1] >= (y_thresh + tolerance)) 
     f_ext = np.zeros_like(V)
-    f_ext[f_ext_mask] = [0, 1, 0]       # <-- upward_force
+    f_ext[f_ext_mask] = [0, 0, 10] 
 
     print(f'Boundary conditions: {bc.sum()} fixed points, {f_ext_mask.sum()} external forces')
 
@@ -220,7 +223,7 @@ def main():
     # Use an external mesh file as input if specified
     if mesh_name:
         # Read tet mesh data from file
-        file_name = os.path.join(ROOT_DIR, 'data', 'assignment2', f'{mesh_name}_tetmesh.dat')
+        file_name = os.path.join(ROOT_DIR, 'compfab-hw2-24s-skeleton','data', 'assignment2', f'{mesh_name}_tetmesh.dat')
         tet_mesh = tet_mesh_from_file(file_name, max_size=cube_size * 10)
 
         # Test deformation using the specified mesh

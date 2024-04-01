@@ -89,11 +89,11 @@ class LinearElastic(Material):
         # --------
         # TODO: Your code here. Think about which elements in d(F.T)/dF are non-zero.
         dFT_dF = np.zeros((dim2, dim2))
-        for i in range(dim):        # <--
-            for j in range(dim):    # <--
+        for i in range(dim):       
+            for j in range(dim):    
                 dFT_dF_idx = j * dim + i  # Index in flattened d(F^T)/dF for the derivative of F^T[j,i] w.r.t F[i,j]  # <--
                 F_idx = i * dim + j  # Corresponding index in the flattened version of F  # <--
-                dFT_dF[F_idx,dFT_dF_idx] = 1 # <-- swapped indices?
+                dFT_dF[F_idx,dFT_dF_idx] = 1 
 
         #print(f"dFT_dF:{dFT_dF}")
 
@@ -101,7 +101,7 @@ class LinearElastic(Material):
         # --------
         # TODO: Your code here.
         # HINT: The `np.eye(n)` function creates an identify matrix of size nxn
-        D1 = np.eye(dim2) + dFT_dF # <-- I + d(F.T)/dF
+        D1 = np.eye(dim2) + dFT_dF # I + d(F.T)/dF
 
         # Compute D2 = d(F.trace() * I)/dF
         # --------
@@ -112,11 +112,7 @@ class LinearElastic(Material):
         I_dxd = np.eye(dim)
         D2 = np.zeros((dim2, dim2))
         for i in range(dim):       
-                #D2[i*dim:(i+1)*dim, i*dim:(i+1)*dim] = I_dxd #this doesn't break the solver, but it's just an identity matrix?! Equivalent to D2 = np.eye(dim2)
-                D2[i*dim + i] = I_dxd.flatten() #this seems like the correct thing to do from piazza
-       # print(f"D2:{D2}")
-        #print(f"D2:{D2}")
-        #print(f"D2 shape:{D2.shape}")  
+                D2[i*dim + i] = I_dxd.flatten() 
 
 
         # Compute dP/dF
