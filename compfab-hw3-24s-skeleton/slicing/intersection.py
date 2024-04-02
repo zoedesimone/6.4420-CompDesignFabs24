@@ -55,7 +55,7 @@ def triangle_plane_intersection(triangle: np.ndarray, origin: np.ndarray, normal
     # Neither point is on the plane, but they are on opposite sides, so we
     # can linearly interpolate the intersection of the edge and the plane.
     def test_edge(onV1, onV2, dist1, dist2, v1, v2):
-        if (not onV1) and (not onV2) and (dist1 > 0) != (dist2 > 0):
+        if (not onV1) and (not onV2) and (dist1 > 0) != (dist2 > 0):# if 2 vertices have opposite distance field - aka one pos and one neg
             d1 = abs(dist1)
             total = d1 + abs(dist2)
             t = d1 / total
@@ -72,8 +72,8 @@ def closest_parameter_on_line(start: np.ndarray, end: np.ndarray, point: np.ndar
     """
     start, end, point: (2,)
     """
-    l2 = np.linalg.norm(start - end)
-    if l2 <= 1e-6:
+    l2 = np.linalg.norm(start - end) #line between start and end
+    if l2 <= 1e-6: #if the line is negligible length
         return 0.0
     return np.dot(point - start, end - start) / l2
 

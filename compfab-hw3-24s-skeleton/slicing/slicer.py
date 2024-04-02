@@ -31,6 +31,7 @@ def slice_to_gcode(stl_in: str, gcode_out: str, dz: float) -> list[list[list[np.
 
 @typechecked
 def transform_to_fit_bed(mesh: Trimesh) -> tuple[Trimesh, float, float]:
+    """Scale the mesh to fit inside of the print bed, scaling down the bounding box and mesh."""
     # Compute the bounding box of our mesh
     obj_min = mesh.vertices.min(axis=0)
     obj_max = mesh.vertices.max(axis=0)
@@ -67,6 +68,10 @@ class Edge:
 
     def __repr__(self) -> str:
         return f"({format_vertex(self.start)} -> {format_vertex(self.end)})"
+    
+    def reverse(self):
+        """Return a new Edge with start and end swapped."""
+        return Edge(self.end, self.start)
 
 
 def format_vertex(vtx: np.ndarray) -> str:
@@ -103,8 +108,8 @@ def slice_mesh(mesh: trimesh.Trimesh, bottom: float, top: float, dz: float) -> l
         maxZ = max(tri[0][2], tri[1][2], tri[2][2])
 
         z = minZ
-        j = int(np.floor((z - bottom) / dz))
-        while (j - 1) * dz < maxZ and j < len(slice_plane_heights):
+        j = int(np.floor((z - bottom) / dz)) # layer number it could intersect with
+        while (j - 1) * dz < maxZ and j < len(slice_plane_heights): #keep all triangles with a max height above that plane
             filtered_triangles[j].append(tri)
             j += 1
 
@@ -147,7 +152,7 @@ def create_contours(intersection_edges: list[list[Edge]]) -> list[list[list[np.n
 
     Hints:
      1. Think of how to connect cutting edges. Remember that edges in the input "soup" may be in arbitrary
-        orientations.
+        orientations.(Aka: start and end are equivalent)
      2. Some edges may be isolated and cannot form a contour. Detect and remove these.
         Bonus (0 points): think about what causes this to happen.
      3. There can and will be multiple contours in a layer (this is why we have the [j] dimension).
@@ -156,11 +161,40 @@ def create_contours(intersection_edges: list[list[Edge]]) -> list[list[list[np.n
         looping over all the other edges to figure out which are connected to it?
     """
     layers: list[list[list[np.ndarray]]] = []
+    tolerance=1e-6 # this is key!
 
-    for i, layer in enumerate(intersection_edges):
-        # TODO: Your code here.
-        #       Build potentially many contours out of a single layer by connecting edges.
-        contours: list[list[np.ndarray]] = []
+    for layer in intersection_edges:
+        contours = []
+        remaining_edges = layer[:]
+
+        while remaining_edges:
+            current_edge = remaining_edges.pop(0)
+            contour = [current_edge.start]
+            next_vertex = current_edge.end
+
+            contour_extended = True
+            while contour_extended:
+                contour_extended = False
+                for i, edge in enumerate(remaining_edges):
+                    if np.allclose(edge.start, next_vertex, atol=tolerance):
+                        # Direct connection with tolerance
+                        next_vertex = edge.end
+                        contour.append(edge.start)
+                        remaining_edges.pop(i)
+                        contour_extended = True
+                        break
+                    elif np.allclose(edge.end, next_vertex, atol=tolerance):
+                        # Connection in reverse with tolerance
+                        edge = edge.reverse()
+                        next_vertex = edge.end
+                        contour.append(edge.start)
+                        remaining_edges.pop(i)
+                        contour_extended = True
+                        break
+
+            if len(contour) > 2:  # At least 3 points to form a contour
+                contours.append([np.array(point) for point in contour])
+
         layers.append(contours)
 
     return layers
