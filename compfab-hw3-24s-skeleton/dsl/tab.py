@@ -43,58 +43,68 @@ class Tab:
         Hint: You may want to specify the convention on how you order these points.
         Hint: You can call this function on the parent to help get started.
         """
-        width_omega_shift = math.sin(self.omega)*self.height
-        height_omega_shift = math.cos(self.omega)*self.height
+
+        def normalize_vector(v):
+            """
+            Normalizes a 2D vector v = (x, y) to have a length of 1.
+
+            Parameters:
+            v (np.ndarray): A numpy array representing the 2D vector.
+
+            Returns:
+            np.ndarray: The normalized 2D vector.
+            """
+            norm = np.linalg.norm(v)
+            if norm == 0:
+                # Return the original vector if it's the zero vector to avoid division by zero
+                return v
+            return v / norm
         
-        if self.parent == None:
-            #If the tab is the parent tab:
-            V1 = np.array([0, 0]) #top left
-            V2 = np.array([0 + width_omega_shift,-self.height]) #bottom left
-            V3 = np.array([self.width+ width_omega_shift,-self.height]) #bottom right
-            V4 = np.array([self.width,0]) #top right
+        width_omega_shift = np.sin(math.radians(self.omega)) * self.height
+        height_omega_shift = np.cos(math.radians(self.omega)) * self.height
+
+        if self.parent is None:
+            # If the object is the parent itself:
+            V1 = np.array([0, 0])  # top left
+            V2 = np.array([0 + width_omega_shift, -self.height])  # bottom left
+            V3 = np.array([self.width + width_omega_shift, -self.height])  # bottom right
+            V4 = np.array([self.width, 0])  # top right
         else:
-            parent_tab = self.parent
-            P1,P2,P3,P4 = parent_tab.compute_corner_points() 
-            #check which side the child is attaching to the parent
+            # Compute parent's corners to position this object
+            P1, P2, P3, P4 = self.parent.compute_corner_points()
 
-            #Edge case: in the case of LEFT and RIGHT we need to consider if the parent has an omega
-            # in this case we need to take into account the shifts based on that angle
-            parent_omega = parent_tab.omega
+            # Choosing reference points based on the side to attach to
+            if self.side == Side.BOTTOM:  # Attach to bottom of parent
+                reference_point = P2
+                direction_vector = normalize_vector(np.array([P3[0]-P2[0], P3[1]-P2[1]]))  # Rightward: P2 to P3
+                
+            elif self.side == Side.LEFT:  # Attach to left of parent
+                reference_point = P1
+                direction_vector = normalize_vector(np.array([P2[0]-P1[0], P2[1]-P1[1]]))  # Downward: P1 to P2
 
-            if self.side == Side.BOTTOM:# P2, the lower left point is the reference
-                P2_x = P2[0]
-                P2_y = P2[1]
-                V1 = np.array([P2_x+self.offset, P2_y])  
-                V2 = np.array([P2_x+self.offset + width_omega_shift, P2_y - height_omega_shift]) 
-                V3 = np.array([P2_x+self.offset + width_omega_shift + self.width, P2_y - height_omega_shift]) 
-                V4 = np.array([P2_x+self.offset + self.width, P2_y]) 
+            elif self.side == Side.RIGHT:  # Attach to right of parent
+                reference_point = P3
+                direction_vector = normalize_vector(np.array([P4[0]-P3[0], P4[1]-P3[1]]))  # Upward
 
-            elif self.side == Side.LEFT:
-                P1_x = P1[0]
-                P1_y = P1[1]
-                V1 = np.array([P1_x, P1_y - self.offset])
-                V2 = np.array([P1_x - height_omega_shift, P1_y - width_omega_shift - self.offset ])
-                V3 = np.array([P1_x - height_omega_shift, P1_y - self.width - width_omega_shift - self.offset ])
-                V4 = np.array([P1_x, P1_y - self.offset - self.width])
+            else:  # Side.TOP or any other case, attach to top of parent
+                reference_point = P4
+                direction_vector = normalize_vector(np.array([P1[0]-P4[0], P1[1]-P4[1]]))  # Leftward
+
+            # Adjusting for offset and alignment
+            shift_vector = direction_vector * self.offset
             
-            elif self.side == Side.RIGHT:
-                P3_x = P3[0]
-                P3_y = P3[1]
-                V1 = np.array([P3_x, P3_y +self.offset])
-                V2 = np.array([P3_x +height_omega_shift, P3_y +self.offset +width_omega_shift])
-                V3 = np.array([P3_x + height_omega_shift, P3_y + self.offset + self.width +width_omega_shift])
-                V4 = np.array([P3_x, P3_y +self.offset +self.width])
+            x_shift = width_omega_shift* direction_vector #The shift in the x direction should be along the direction vector
+            normal_to_direction_vector = normalize_vector(np.array([direction_vector[1], -direction_vector[0]]))
+            y_shift = height_omega_shift* normal_to_direction_vector #The shift in the y direction should be along the normal to the direction vector
+            rotated_vector = x_shift +y_shift #np.array([width_omega_shift, -height_omega_shift])
+            # Calculating new points
+            V1 = reference_point + shift_vector
+            V2 = V1 + rotated_vector
+            rotated_width_vector = self.width*direction_vector 
+            V3 = V2 + rotated_width_vector
+            V4 = V1 + rotated_width_vector
 
-            else: #Side.TOP
-                P4_x = P4[0]
-                P4_y = P4[1]
-                V1 = np.array([P4_x - self.offset, P4_y])
-                V2 = np.array([P4_x - self.offset - width_omega_shift, P4_y +height_omega_shift])
-                V3 = np.array([P4_x - self.offset - self.width - width_omega_shift, P4_y + height_omega_shift])
-                V4 = np.array([P4_x - self.offset - self.width, P4_y])
-
-        
-        return (V1,V2,V3,V4)
+        return V1, V2, V3, V4
 
 
     def compute_all_corner_points(self) -> list[tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
