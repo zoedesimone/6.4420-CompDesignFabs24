@@ -47,12 +47,6 @@ class Tab:
         def normalize_vector(v):
             """
             Normalizes a 2D vector v = (x, y) to have a length of 1.
-
-            Parameters:
-            v (np.ndarray): A numpy array representing the 2D vector.
-
-            Returns:
-            np.ndarray: The normalized 2D vector.
             """
             norm = np.linalg.norm(v)
             if norm == 0:
