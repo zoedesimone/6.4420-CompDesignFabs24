@@ -67,14 +67,14 @@ def set_boundary_conditions(mesh: TetMesh) -> Tuple[np.ndarray, np.ndarray]:
     # Apply -5000N forces in the Z direction at the top layer of vertices
     # --------
     # TODO: Your code here. First calculate the vertex mask, then specify the force to apply.
-    f_ext_mask = np.ones(len(vertices), dtype=bool)     # <--
-    f_ext[f_ext_mask] = 0                               # <--
+    f_ext_mask = vertices[:, 2] == bbox_max[2] #np.ones(len(vertices), dtype=bool)     # <--top layer vertices by their Z coordinate
+    f_ext[f_ext_mask,2] = -5000                               # <--force in the Z-direction
 
     # Obtain the boundary condition mask
     # Note that the vertices on the left and right sides of the bridge are fixed
     # --------
     # TODO: Your code here. Use bit-wise Boolean operations (`&` or `|`) to chain multiple rules.
-    bc_mask = np.zeros(len(vertices), dtype=bool)       # <--
+    bc_mask =  (vertices[:, 0] == bbox_min[0] ) | (vertices[:, 0] == bbox_max[0]) #np.zeros(len(vertices), dtype=bool)       # <--
 
     return f_ext, bc_mask
 
@@ -97,34 +97,34 @@ def solve_performance(stl_file: str, save_tet_mesh: str='') -> Tuple[float, floa
 
     # Read and voxelize the input mesh
     voxelizer = Voxelizer(stl_file, voxel_size)
-    voxelizer.run_accelerated()
+    occupancy, voxels = voxelizer.run_accelerated()
 
     # Convert the voxel grid into a tetrahedral mesh
     # --------
     # TODO: Your code here. Use a proper method of the Voxelizer class.
-    tet_mesh = None         # <--
+    tet_mesh = voxelizer.convert_to_tet_mesh()         # <--
 
     # Run static FEM analysis and compute compliance
     # --------
     # TODO: Your code here. Complete the process by filling in the following lines:
     #   1. Create the FEM solver by instantiating a StaticFEM object
-    fem = ...               # <--
+    fem = StaticFEM(tet_mesh, material)              # <--
 
     #   2. Specify boundary conditions using the `set_bounadry_conditions` function
-    f_ext, bc_mask = ..., ...       # <--
+    f_ext, bc_mask = set_boundary_conditions(tet_mesh)       # <--
 
     #   3. Solve the FEM problem using the linear solver
-    u = ...                 # <--
+    u = fem.solve_linear(f_ext, bc_mask)                # <--
 
     #   4. Compute compliance (C = F^T * U)
     # HINT: use `a.ravel()` to flatten a 2D array
-    compliance = 0.0        # <--
+    compliance = np.dot(f_ext.ravel(), u.ravel()) #f_ext.T @ u #0.0        # <--
 
     # Compute mass (number of voxels in the voxelized mesh)
     # --------
     # TODO: Your code here. Use the `np.count_nonzero` function to count the number of non-zero
     # values in an array.
-    mass = 0.0              # <--
+    mass = voxels             # <-- percentage of voxels * the size of a voxel
 
     # Optionally save the tetrahedral mesh
     if tet_mesh and save_tet_mesh:
@@ -191,21 +191,24 @@ def run_bridges():
             print(f"Error - Bridge mesh '{mesh_file}' not found. Did you run gen_bridges.py?")
             quit()
 
+
+    # Save all performance metrics
+    result_dir = os.path.join(ROOT_DIR, 'data', 'assignment5', 'results', 'part2')
+    csv_file_path = os.path.join(result_dir, 'q2_all_perfs.csv')
+    pd.DataFrame(perf, columns=['x', 'y']).to_csv(csv_file_path, index=False)
+
+    print(f"Performance metrics saved to '{csv_file_path}'")
+
     # Compute the Pareto front
     pareto = pareto_front(np.array(perf, dtype=np.float64))
 
     # Save the Pareto front as a CSV file
-    result_dir = os.path.join(ROOT_DIR, 'data', 'assignment5', 'results', 'part2')
     csv_file_path = os.path.join(result_dir, 'q2_result.csv')
     pd.DataFrame(pareto, columns=['x', 'y']).to_csv(csv_file_path, index=False)
 
     print(f"Pareto front saved to '{csv_file_path}'")
 
-    # Save all performance metrics
-    csv_file_path = os.path.join(result_dir, 'q2_all_perfs.csv')
-    pd.DataFrame(perf, columns=['x', 'y']).to_csv(csv_file_path, index=False)
-
-    print(f"Performance metrics saved to '{csv_file_path}'")
+    
 
 
 def main():

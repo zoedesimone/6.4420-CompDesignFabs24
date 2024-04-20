@@ -139,7 +139,7 @@ class Voxelizer:
         Run accelerated voxelization.
         '''
         # Read voxel grid dimensions from the class
-        nx, ny, _ = self.voxel_grid_size
+        nx, ny, nz = self.voxel_grid_size
 
         # These class members are frequently used so it's best to assign them to local variables
         mesh = self.mesh                # Input mesh
@@ -163,26 +163,28 @@ class Voxelizer:
         # --------
         # TODO: Your code here. Set the voxel grid to empty in one line of code
         # (hint: slicing indexing).
-        pass
+        voxels.fill(0)
 
         # Intersect the rays with the mesh
         # --------
         # TODO: Your code here. Invoke the `parallel_ray_mesh_intersection` function to get the
         # intersections, which is defined in `intersection.py`. Note that the value some keyword
         # argument should be provided.
-        intersections = []
+        #intersections = []
+        intersections = parallel_ray_mesh_intersection(mesh, ray_origins, ray_direction, origins_outside=True)
 
         # Fill the voxels by looping over all rays
         # --------
         # TODO: Your code here. Write a nested loop over each ray.
-        while False:        # <--
-            while False:    # <--
+        for i in range(nx):       # <--
+            for j in range(ny):   # <--
 
                 # Get the intersections of the current ray
+                index = i * ny + j
                 distances = np.array(intersections[i * ny + j])
 
                 # Only process rays with intersections
-                if len(distances):
+                if distances.size > 0:
 
                     # Convert distances to alternate indices of interval endpoints
                     lower_indices = np.ceil(distances[::2] / dx - 0.5 - 1e-8).astype(np.int64)
@@ -193,13 +195,15 @@ class Voxelizer:
                     # TODO: Your code here. Write a for loop with one line of code as its body.
                     # The loop handles each segment of voxels marked by the lower and upper indices
                     # computed above (hint: slicing indexing).
-                    for _ in []:        # <-- for loop
-                        pass            # <-- loop body
+                    for k in range(len(lower_indices)):       # <-- for loop
+                        start = max(0, lower_indices[k])            # <-- loop body
+                        end = min(upper_indices[k], nz - 1)
+                        voxels[i, j, start:end + 1] = 1
 
         # Compute the occupancy of the voxel grid, i.e., the fraction of voxels inside the mesh
         occupancy = np.count_nonzero(voxels) / voxels.size
 
-        return occupancy
+        return occupancy, np.count_nonzero(voxels)
 
 
     def run_approximate(self, num_samples: int=20) -> float:

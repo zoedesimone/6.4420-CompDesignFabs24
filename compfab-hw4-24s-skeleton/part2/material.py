@@ -84,32 +84,41 @@ class LinearElastic(Material):
         dim, dim2 = F.shape[0], F.shape[0] ** 2
         mu, lm = self.mu, self.lm
 
+        #print(f"defomation gradient F:{F}")
         # Compute d(F.T)/dF
         # --------
         # TODO: Your code here. Think about which elements in d(F.T)/dF are non-zero.
         dFT_dF = np.zeros((dim2, dim2))
-        for i in []:        # <--
-            for j in []:    # <--
-                ...         # <--
+        for i in range(dim):       
+            for j in range(dim):    
+                dFT_dF_idx = j * dim + i  # Index in flattened d(F^T)/dF for the derivative of F^T[j,i] w.r.t F[i,j]  # <--
+                F_idx = i * dim + j  # Corresponding index in the flattened version of F  # <--
+                dFT_dF[F_idx,dFT_dF_idx] = 1 
+
+        #print(f"dFT_dF:{dFT_dF}")
 
         # Compute D1
         # --------
         # TODO: Your code here.
         # HINT: The `np.eye(n)` function creates an identify matrix of size nxn
-        D1 = np.zeros((dim2, dim2))     # <--
+        D1 = np.eye(dim2) + dFT_dF # I + d(F.T)/dF
 
         # Compute D2 = d(F.trace() * I)/dF
         # --------
-        # TODO: Your code here. Think about which elements in D2 are non-zero
+        # trace is the sum of its diagonal elements. The trace multiplied by I
+        # affects only the diagonal elements of F, scaled by the identity matrix
+        # tr(F) affects all diagonal elements of tr(F)*I equally
+        #TODO: Your code here. Think about which elements in D2 are non-zero
+        I_dxd = np.eye(dim)
         D2 = np.zeros((dim2, dim2))
-        for i in []:        # <--
-            for j in []:    # <--
-                ...         # <--
+        for i in range(dim):       
+                D2[i*dim + i] = I_dxd.flatten() 
+
 
         # Compute dP/dF
         # --------
         # TODO: Your code here.
-        dP_dF = np.zeros((dim2, dim2))      # <--
+        dP_dF = mu*D1 +lm*D2     # <--
 
         return dP_dF
 
