@@ -13,14 +13,44 @@ def print_points(points):
 
 
 def pareto_front(points: np.ndarray) -> np.ndarray:
-    """
+    '''
     Compute the Pareto front of a set of 2D points. Minimization is assumed for all properties.
+    '''
+    # Check input validity
+    assert points.ndim == 2 and points.shape[-1] == 2 and points.shape[0] > 0, \
+        'The input array must represent a set of 2D points'
 
-    points: (n, 2)
-    returns: (n_pareto, 2) in order of non-decreasing x
-    """
-    # TODO: 1.1
-    return np.array([])
+    # Sort the points by both properties
+    # --------
+    # HINT:
+    #   1. The function you will use here is called `np.lexsort`, whose documentation is at
+    #      https://numpy.org/doc/stable/reference/generated/numpy.lexsort.html. `np.lexsort`
+    #      supports sorting by multiple columns in a user-specified order. You can decide whichever
+    #      order you want here.
+    #   2. Indexing a NumPy array using the output of `np.lexsort` returns the sorted array.
+    points = points[np.lexsort((points[:, 1], points[:, 0]))]     # <-- sorted indices - i want the lowest y values first in the list
+
+    pareto_indices = [0]        # List of indices to Pareto-optimal points (in the sorted array)
+    pareto_x = points[0, 0]     # X value of the last Pareto-optimal point
+    pareto_y = points[0, 1]     # Y value of the last Pareto-optimal point
+
+    # Traverse the sorted array to figure out Pareto-optimal points
+    for i in range(points.shape[0]):
+
+        # Add this point to the Pareto front if it isn't dominated by the last Pareto-optimal point
+        # --------
+        if points[i,1] < pareto_y:       # <--
+            pareto_indices.append(i)         # <--
+
+            # Update the last Pareto-optimal point using this point
+            # --------
+            pareto_x = points[i,0]      # <--
+            pareto_y = points[i,1]      # <--
+
+    # Return the Pareto front
+    pareto_front = points[pareto_indices]
+
+    return pareto_front
 
 
 def pareto_brute_force(points: np.ndarray) -> np.ndarray:
